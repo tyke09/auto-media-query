@@ -1,0 +1,107 @@
+﻿<!DOCTYPE html>
+<html xmlns='http://www.w3.org/1999/xhtml'>
+<head>
+  <meta http-equiv='Content-Type' content='text/html; charset=utf-8' />
+  <title></title>
+  <style>
+    textarea {
+      width: 800px;
+      height: 900px;
+      float: left;
+    }
+
+    .trans {
+      float: left;
+      margin-left: 50px;
+      margin-right: 50px;
+    }
+
+    .trans div {
+      width: 100px;
+      height: 100px;
+      line-height: 100px;
+      font-size: 30px;
+      border: 1px solid #000; 
+      text-align: center;
+      cursor: pointer;
+    } 
+
+    #tran1 {
+      margin-top: 350px;
+    }
+  </style>
+  <script>
+
+    var array = [
+      { width: 1650, rate: 0.85 },
+      { width: 1380, rate: 0.7 },
+    ]
+
+    window.onload = function () {
+      var tran1 = document.getElementById('tran1');
+      tran1.addEventListener('click', function () {
+        var t1 = document.getElementById('t1');
+        var t2 = document.getElementById('t2');
+        t2.value = '';
+        var text = t1.value;
+        var output = translate(text);
+        t2.value = output;
+      }, false)
+    } 
+
+    function translate(text) {
+      var output = '';
+      var rules = [];
+      var index = text.indexOf('\n');
+      while (index >= 0) {
+        var line = text.substring(0, index);
+        text = text.substring(index + 1);
+        func(line);
+        index = text.indexOf('\n');
+      }
+      function add(str) {
+        output += str + '\n';
+      }
+      function func(line) {
+        const isBegin = /\{$/.test(line);
+        const hasPx = /(([1-9]\d+)|[2-9])px/.test(line);        
+        if (isBegin) {
+          rules.push({ selector: line, lines: [] });
+        }
+        if (hasPx) {
+          rules[rules.length - 1].lines.push(line);
+        }
+      }
+      array.forEach((item, index) => {
+        index > 0 && add('');
+        add(`@media screen and (max-width: ${item.width}px) {`);
+        rules.filter(x => x.lines.length > 0).forEach(rule => {
+          add('');
+          add('  ' + rule.selector);
+          rule.lines.forEach(line => {
+            const isFontSize = /font-size:/.test(line);
+            var parsedLine = line.replace(/\d+(\.\d+)?px/g, word => {
+              const parsedNumber = Math.round(parseFloat(word) * item.rate * 10000) / 10000;
+              if (isFontSize) {
+                return Math.max(12, parsedNumber) + 'px';
+              }
+              return parsedNumber + 'px';
+            })
+            add('  ' + parsedLine);
+          })
+          add('  }');
+        })
+        add('}')        
+      });
+      return output;
+    }
+  </script>
+</head>
+<body>
+  <textarea id='t1'></textarea>
+  <div class='trans'>    
+    <div id='tran1'>Go</div>
+  </div>
+  <textarea id='t2'></textarea>
+</body>
+</html>
