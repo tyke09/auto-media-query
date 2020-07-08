@@ -32,6 +32,38 @@
   </style>
   <script>
 
+     
+    const copyToClipboard = text => {
+      const el = document.createElement('textarea');
+      el.value = text;
+      el.setAttribute('readonly', '');
+      el.style.contain = 'strict';
+      el.style.position = 'absolute';
+      el.style.left = '-9999px';
+      el.style.fontSize = '12pt';
+      const selection = document.getSelection();
+      let originalRange = false;
+      if (selection.rangeCount > 0) {
+        originalRange = selection.getRangeAt(0);
+      }
+      document.body.appendChild(el);
+      el.select();
+      el.selectionStart = 0;
+      el.selectionEnd = text.length;
+      let success = false;
+      try {
+        success = document.execCommand('copy');
+      } catch (err) { }
+      document.body.removeChild(el);
+      if (originalRange) {
+        selection.removeAllRanges();
+        selection.addRange(originalRange);
+      }
+      return success;
+    }
+ 
+
+
     var array = [
       { width: 1650, rate: 0.85 },
       { width: 1380, rate: 0.7 },
@@ -50,34 +82,70 @@
     } 
 
     function translate(text) {
-      var output = '';
-      var rules = [];
-      var index = text.indexOf('\n');
-      while (index >= 0) {
-        var line = text.substring(0, index);
-        text = text.substring(index + 1);
-        func(line);
-        index = text.indexOf('\n');
+
+      // 遍历文本，分隔为行数组
+      var lines = [];
+      while (text) {
+        var line;
+        var index = text.indexOf('\n');        
+        if (index >= 0) {
+          line = text.substring(0, index);
+          text = text.substring(index + 1);
+        }
+        else {
+          line = text;
+          text = '';
+        }
+        if (/@media/.test(line)) break;
+        lines.push(line);
       }
+
+      // output是输出字符串
+      var output = '';
       function add(str) {
         output += str + '\n';
-      }
-      function func(line) {
+      }      
+      
+      // 解析出css规则，保存在rules数组中
+      var rules = [];      
+      var tmpSelector = []; 
+      for (var i = 0; i < lines.length; i++) {
+        var line = lines[i];
+        add(line);
+
+        // 是否为多行选择器
+        const isMultiSelector = /\,$/.test(line); 
         const isBegin = /\{$/.test(line);
-        const hasPx = /(([1-9]\d+)|[2-9])px/.test(line);        
+        const hasPx = /(([1-9]\d+)|[2-9])px/.test(line);
+        if (isMultiSelector) {
+          tmpSelector.push(line);
+        }
         if (isBegin) {
-          rules.push({ selector: line, lines: [] });
+          tmpSelector.push(line);
+          rules.push({ selector: tmpSelector.slice(), lines: [] });
+          tmpSelector.length = 0;
         }
         if (hasPx) {
           rules[rules.length - 1].lines.push(line);
         }
       }
+
+      // 删除多余的空行
+      add('');
+      add('');
+      for (var i = 0; i < 99; i++) {
+        output = output.replace('\n\n\n\n', '\n\n\n');
+      }
+
+      // 编写媒体查询部分
       array.forEach((item, index) => {
         index > 0 && add('');
         add(`@media screen and (max-width: ${item.width}px) {`);
         rules.filter(x => x.lines.length > 0).forEach(rule => {
           add('');
-          add('  ' + rule.selector);
+          rule.selector.forEach(s => {
+            add('  ' + s);
+          })          
           rule.lines.forEach(line => {
             const isFontSize = /font-size:/.test(line);
             var parsedLine = line.replace(/\d+(\.\d+)?px/g, word => {
@@ -93,6 +161,9 @@
         })
         add('}')        
       });
+
+      copyToClipboard(output);
+
       return output;
     }
   </script>
