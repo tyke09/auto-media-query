@@ -114,8 +114,8 @@
         add(line);
 
         // 是否为多行选择器
-        const isMultiSelector = /\,$/.test(line); 
-        const isBegin = /\{$/.test(line);
+        const isMultiSelector = /\,\s*$/.test(line); 
+        const isBegin = /\{\s*$/.test(line);
         const hasPx = /(([1-9]\d+)|[2-9])px/.test(line);
         if (isMultiSelector) {
           tmpSelector.push(line);
@@ -129,6 +129,8 @@
           rules[rules.length - 1].lines.push(line);
         }
       }
+
+      console.log(rules);
 
       // 删除多余的空行
       add('');
